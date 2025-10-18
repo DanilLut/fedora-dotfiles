@@ -12,6 +12,11 @@ alias ls="eza -la --icons -F --group-directories-first --git"
 alias vim="nvim"
 alias utar="tar -xvzf "
 alias t="tmux"
+# Audio loopback controls
+alias micloop-start='pactl load-module module-loopback latency_msec=100'
+alias micloop-stop='pactl unload-module module-loopback'
+# Record mic monitor to a WAV file
+alias mic-rec="parec -d alsa_output.pci-0000_04_00.6.analog-stereo.monitor --file-format=wav"
 
 eval "$(starship init zsh)"
 
