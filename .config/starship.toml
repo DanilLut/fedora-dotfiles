@@ -1,0 +1,43 @@
+format = """
+$directory\
+$git_branch\
+$git_status\
+$fill\
+$line_break\
+$character
+"""
+
+[fill]
+symbol = " "
+
+[directory]
+truncation_length = 8
+truncation_symbol = '…/'
+format = "[ $path]($style)"
+style = "white"
+
+[git_branch]
+format = " [$symbol$branch]($style) "
+symbol = " "
+style = "bold yellow"
+
+[git_status]
+format = "[$all_status$ahead_behind]($style) "
+style = "bold #fde68a"
+ahead = "󰛃 "
+behind = "󰛀 "
+stashed = "󰘷 "
+conflicted = "󰆖 "
+staged = "󰐖 "
+deleted = "󰅗 "
+renamed = "󰑕 "
+untracked = "󰞋 "
+modified = "󱩼 "
+
+[cmd_duration]
+format = "[󱦟 took $duration]($style) "
+style = "black bold"
+
+[character]
+success_symbol = '[](bold yellow) '
+error_symbol = '[✗](bold red) '
