@@ -1,7 +1,0 @@
-ADD_DIRS=(
-    "$HOME/.config/nvim"
-)
-
-ADD_DIRS_WITH_SUBDIRS=(
-    "$HOME/src"
-)

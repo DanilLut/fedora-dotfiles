@@ -1,2 +1,3 @@
 .ssh/*
 .gitconfig
+.tmux-sessionizer
