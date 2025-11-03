@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+CONFIG_FILE_PATH="$HOME/.tmux-sessionizer"
+
+if [[ -f "$CONFIG_FILE_PATH" ]]; then
+    source "$CONFIG_FILE_PATH"
+else
+    echo "Error: $CONFIG_FILE_PATH file not found."
+    exit 1
+fi
+
+selected_list=()
+
+if [[ -n "${ADD_DIRS[@]}" ]]; then
+    for path in "${ADD_DIRS[@]}"; do
+        [[ -d "$path" ]] && selected_list+=("$path")
+    done
+fi
+
+if [[ -n "${ADD_DIRS_WITH_SUBDIRS[@]}" ]]; then
+    for base_path in "${ADD_DIRS_WITH_SUBDIRS[@]}"; do
+        if [[ -d "$base_path" ]]; then
+            selected_list+=("$base_path")
+            first_level_dirs=$(find -L "$base_path" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+            selected_list+=($first_level_dirs)
+        fi
+    done
+fi
+
+# Use fzf for selection if no argument is passed
+if [[ $# -eq 1 ]]; then
+    selected=$1
+else
+    selected=$(printf "%s\n" "${selected_list[@]}" | fzf)
+fi
+
+if [[ -z $selected ]]; then
+    exit 0
+fi
+
+selected_name=$(basename "$selected" | tr . _)
+tmux_running=$(pgrep tmux)
+
+if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
+    tmux new-session -s $selected_name -c $selected
+    exit 0
+fi
+
+if ! tmux has-session -t=$selected_name 2> /dev/null; then
+    tmux new-session -ds $selected_name -c $selected
+fi
+
+tmux switch-client -t $selected_name
+

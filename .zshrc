@@ -17,6 +17,12 @@ alias micloop-start='pactl load-module module-loopback latency_msec=100'
 alias micloop-stop='pactl unload-module module-loopback'
 # Record mic monitor to a WAV file
 alias mic-rec="parec -d alsa_output.pci-0000_04_00.6.analog-stereo.monitor --file-format=wav"
+alias c="code . --enable-features=WaylandWindowDecorations --ozone-platform-hint=auto"
+
+function run-tmux-sessionizer { tmux-sessionizer; zle redisplay; }
+zle -N run-tmux-sessionizer
+bindkey '^f' run-tmux-sessionizer
+bindkey "^U" backward-kill-line
 
 eval "$(starship init zsh)"
 
