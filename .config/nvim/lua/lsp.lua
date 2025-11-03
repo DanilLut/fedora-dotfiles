@@ -191,7 +191,14 @@ vim.lsp.config.ts_ls = {
 }
 -- }}}
 
--- vim.lsp.config.volar.setup {}
+vim.lsp.config.vue_ls = {
+    settings = {
+        -- Example settings, adjust as needed
+        vue = {
+            hybridMode = true, -- Enable hybrid mode
+        },
+    },
+}
 
 -- CSSls {{{
 vim.lsp.config.cssls = {
@@ -201,6 +208,14 @@ vim.lsp.config.cssls = {
     init_options = {
         provideFormatter = false,
     },
+    settings = {
+    css = {
+            validate = true,
+      lint = {
+        unknownAtRules = "ignore",
+      },
+    },
+  },
 }
 -- }}}
 
@@ -271,7 +286,7 @@ vim.lsp.config.htmlls = {
 -- }}}
 
 -- vim.lsp.enable({ "ts_ls", "cssls", "tailwindcssls", "htmlls", "svelte" })
-vim.lsp.enable({ "ts_ls", "cssls", "tailwindcssls", "htmlls" })
+vim.lsp.enable({ "ts_ls", "cssls", "tailwindcssls", "htmlls", "vue_ls" })
 
 -- }}}
 

@@ -8,7 +8,7 @@ return {
       {
         "neovim/nvim-lspconfig",
         config = function()
-          require "configs.lspconfig"
+          require "lsp"
         end,
       },
     },
@@ -42,7 +42,9 @@ return {
   {
     "nvim-treesitter/nvim-treesitter",
     opts = {
-      ensure_installed = { "vim", "lua", "vimdoc", "html", "css", "go", "cpp", "c" },
+      ensure_installed = { "vim", "lua", "vimdoc", "html", "css", "go", "cpp", "c", "vue", "javascript", "typescript" },
+        highlight = { enable = true },
+        indent = { enable = true },
     },
   },
   {
