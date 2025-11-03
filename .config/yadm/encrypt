@@ -1,4 +1,5 @@
 .ssh/*
+.gnupg/**/*
 .config/gnome-backup/*
 .gitconfig
 .tmux-sessionizer
