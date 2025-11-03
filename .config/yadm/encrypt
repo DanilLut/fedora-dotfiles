@@ -1,3 +1,4 @@
 .ssh/*
+.config/gnome-backup/*
 .gitconfig
 .tmux-sessionizer

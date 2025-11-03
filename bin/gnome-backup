@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+# Unified GNOME settings + extensions export/import tool
+# Author: DanilLut
+
+set -euo pipefail
+
+PREFIX="## DCONF-PATH: "
+BACKUP_DIR="${HOME}/.config/gnome-backup"
+DCONF_FILE="${BACKUP_DIR}/gnome-settings.conf"
+EXT_LIST_FILE="${BACKUP_DIR}/extensions.list"
+EXT_CONF_FILE="${BACKUP_DIR}/extensions.conf"
+
+PATHS=(
+  "Ptyxis"
+  "Ptyxis/Profiles/00f7bf4035a90cd1de08bee968eff5e8"
+  "baobab/ui"
+  "desktop/background"
+  "desktop/calendar"
+  "desktop/datetime"
+  "desktop/input-sources"
+  "desktop/interface"
+  "desktop/privacy"
+  "desktop/wm/keybindings"
+  "desktop/wm/preferences"
+  "nautilus/icon-view"
+  "nautilus/preferences"
+  "nautilus/window-state"
+  "settings-daemon/plugins/color"
+  "settings-daemon/plugins/media-keys"
+  "settings-daemon/plugins/power"
+  "shell"
+  "system/location"
+)
+
+mkdir -p "$BACKUP_DIR"
+
+usage() {
+  cat <<EOF
+Usage: $0 <export|import|list>
+
+  export   Export GNOME dconf settings and extensions to ${BACKUP_DIR}/
+  import   Import GNOME dconf settings and extensions from ${BACKUP_DIR}/
+  list     List tracked dconf subtrees
+
+Files used:
+  - ${DCONF_FILE}
+  - ${EXT_LIST_FILE}
+  - ${EXT_CONF_FILE}
+EOF
+  exit 1
+}
+
+ensure_cmd() {
+  for cmd in "$@"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      echo "ERROR: '$cmd' not found. Install it first." >&2
+      exit 2
+    fi
+  done
+}
+
+ensure_cmd dconf gnome-extensions
+
+cmd="${1:-}"
+[[ -z "$cmd" ]] && usage
+
+if [[ "$cmd" == "list" ]]; then
+  for p in "${PATHS[@]}"; do echo "/org/gnome/${p}"; done
+  exit 0
+fi
+
+# --- DCONF EXPORT / IMPORT ---
+
+export_dconf() {
+  : > "$DCONF_FILE"
+  for p in "${PATHS[@]}"; do
+    full="/org/gnome/${p}"
+    [[ "${full: -1}" != "/" ]] && full="${full}/"
+    if dump=$(dconf dump "$full" 2>/dev/null) && [[ -n "${dump//[$'\t\r\n']}" ]]; then
+      printf '%s%s\n' "$PREFIX" "$full" >> "$DCONF_FILE"
+      printf '%s\n\n' "$dump" >> "$DCONF_FILE"
+    fi
+  done
+  echo "✓ Exported GNOME settings → $DCONF_FILE"
+}
+
+import_dconf() {
+  [[ -f "$DCONF_FILE" ]] || { echo "No dconf backup found at $DCONF_FILE"; return; }
+  current_path=""
+  buffer=""
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == "$PREFIX"* ]]; then
+      if [[ -n "$current_path" ]]; then
+        [[ "${current_path: -1}" != "/" ]] && target="${current_path}/" || target="$current_path"
+        printf '%s' "$buffer" | dconf load "$target"
+      fi
+      current_path="${line#$PREFIX}"
+      buffer=""
+    else
+      buffer+="${line}"$'\n'
+    fi
+  done < "$DCONF_FILE"
+  if [[ -n "$current_path" ]]; then
+    [[ "${current_path: -1}" != "/" ]] && target="${current_path}/" || target="$current_path"
+    printf '%s' "$buffer" | dconf load "$target"
+  fi
+  echo "✓ Imported GNOME settings from $DCONF_FILE"
+}
+
+# --- EXTENSIONS EXPORT / IMPORT ---
+
+export_extensions() {
+  gnome-extensions list > "$EXT_LIST_FILE"
+  dconf dump /org/gnome/shell/extensions/ > "$EXT_CONF_FILE"
+  echo "✓ Exported GNOME extensions:"
+  echo "  - $EXT_LIST_FILE"
+  echo "  - $EXT_CONF_FILE"
+}
+
+import_extensions() {
+  [[ -f "$EXT_LIST_FILE" ]] || { echo "No extension list found at $EXT_LIST_FILE"; return; }
+  [[ -f "$EXT_CONF_FILE" ]] || { echo "No extension config found at $EXT_CONF_FILE"; return; }
+
+  # Optional static ignore list for known system extensions
+  IGNORE_EXTS=(
+    "window-list@gnome-shell-extensions.gcampax.github.com"
+    "apps-menu@gnome-shell-extensions.gcampax.github.com"
+    "places-menu@gnome-shell-extensions.gcampax.github.com"
+    "launch-new-instance@gnome-shell-extensions.gcampax.github.com"
+    "alternate-tab@gnome-shell-extensions.gcampax.github.com"
+  )
+
+  should_ignore() {
+    local ext="$1"
+    for ignore in "${IGNORE_EXTS[@]}"; do
+      [[ "$ext" == "$ignore" ]] && return 0
+    done
+    return 1
+  }
+
+  while IFS= read -r ext || [[ -n "$ext" ]]; do
+    [[ -z "$ext" ]] && continue
+
+    # Skip system-level extensions (auto-detected)
+    if [[ -d "/usr/share/gnome-shell/extensions/$ext" ]]; then
+      echo "Skipping system extension: $ext"
+      continue
+    fi
+    # Skip manually ignored ones
+    if should_ignore "$ext"; then
+      echo "Skipping ignored extension: $ext"
+      continue
+    fi
+
+    if gnome-extensions info "$ext" >/dev/null 2>&1; then
+      gnome-extensions enable "$ext" || true
+    else
+      echo "Installing user extension: $ext"
+      extdir="$HOME/.local/share/gnome-shell/extensions/$ext"
+      if [[ -d "$extdir" ]]; then
+        gnome-extensions install --force "$extdir"
+        gnome-extensions enable "$ext"
+      else
+        echo "⚠️  Extension not found locally, skipping: $ext"
+      fi
+    fi
+  done < "$EXT_LIST_FILE"
+
+  dconf load /org/gnome/shell/extensions/ < "$EXT_CONF_FILE"
+  echo "✓ Imported GNOME extensions configuration"
+}
+
+# --- EXECUTION ---
+
+case "$cmd" in
+  export)
+    export_dconf
+    export_extensions
+    ;;
+  import)
+    import_dconf
+    import_extensions
+    ;;
+  *)
+    usage
+    ;;
+esac
+
